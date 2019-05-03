@@ -192,8 +192,9 @@ def handleVideoanalysisResponse(response, lastRequest) {
 		// def detectionType = response.data['body']
 		// log.debug("detectionType: ${response.data}" testTrailingSpace)
 		def detectionType = response.body.toString().trim()
+        def detectionString = ("table.MotionDetect[${cameraChannel}].Enable=false").toString()
         // log.debug("respons.body: ${response.body}")
-		state = (detectionType == "table.MotionDetect[0].Enable=false" ? "off" : "on")
+		state = (detectionType == detectionString ? "off" : "on")
         log.debug("detectionType: ${detectionType}")
 		// log.debug("state: ${state}")
 	}
