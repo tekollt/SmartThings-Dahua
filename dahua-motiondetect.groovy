@@ -98,12 +98,12 @@ def updated() {
 
 	// Ping the NVR every 5 minutes for health-check purposes
 	unschedule()
-	//runEvery5Minutes(refresh)
+	runEvery5Minutes(refresh)
 	// After checkInterval seconds have gone by, ST sends one last ping() before marking as offline
 	// set checkInterval to the length of 2 failed refresh()es (plus an extra minute)
 	sendEvent(name: "checkInterval", value: 2 * 5 * 60 + 60, displayed: false, data: [protocol : "LAN"])
 
-	// refresh()
+	refresh()
 }
 
 def parseResponse(physicalgraph.device.HubResponse response) {
