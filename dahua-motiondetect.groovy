@@ -189,14 +189,13 @@ def handleVideoanalysisResponse(response, lastRequest) {
 	def state = "unknown"
 	if (lastRequest.method == "GET") {
 		// log.debug("Responsdata debug: ${response}")
-		// def detectionType = response.data['table.MotionDetect[0].Enable=']
-		
-		def detectionType = response.body
-		
+		// def detectionType = response.data['body']
+		// log.debug("detectionType: ${response.data}" testTrailingSpace)
+		def detectionType = response.body.toString().trim()
         // log.debug("respons.body: ${response.body}")
 		state = (detectionType == "table.MotionDetect[0].Enable=false" ? "off" : "on")
         log.debug("detectionType: ${detectionType}")
-		log.debug("state: ${state}")
+		// log.debug("state: ${state}")
 	}
 	else if (lastRequest.method == "PUT") {
 		// resonse.data is empty on PUT success, we must use lastRequest data
