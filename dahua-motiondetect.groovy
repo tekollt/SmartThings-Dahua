@@ -49,11 +49,11 @@ metadata {
 	}
 
 	preferences {
-		input name: "nvrIP", type: "text", title: "Device IP", description: "Enter the IP of the Dahua Device", displayDuringSetup: true, required: true
-		input name: "cameraPort", type: "text", title: "TCP Port", description: "Enter the port of the Dahua Device", displayDuringSetup: true, required: true
+		input name: "tcpIP", type: "text", title: "Device IP", description: "Enter the IP of the Dahua Device", displayDuringSetup: true, required: true
+		input name: "tcpPort", type: "text", title: "TCP Port", description: "Enter the TCP port of the Dahua Device, port 80 is used if no value is entered", displayDuringSetup: true, required: true
 		input name: "cameraChannel", type: "text", title: "Camera Channel", description: "Enter the channel of the camera", displayDuringSetup: true, required: false		
-        input name: "nvrUserName", type: "text", title: "Username", description: "Enter the username of the device", displayDuringSetup: true, required: true
-        input name: "nvrPassword", type: "password", title: "Password", description: "Enter the password of the device", displayDuringSetup: true, required: true
+        input name: "userName", type: "text", title: "Username", description: "Enter the username of the device", displayDuringSetup: true, required: true
+        input name: "password", type: "password", title: "Password", description: "Enter the password of the device", displayDuringSetup: true, required: true
 
 	}
 }
@@ -66,32 +66,40 @@ def installed() {
 def updated() {
 	log.debug("updated()")
 
-	if (state.nvrIP != nvrIP) {
-		state.nvrIP = nvrIP
-		log.debug("New Device IP: ${state.nvrIP}")
+	if (state.tcpIP != tcpIP) {
+		state.tcpIP = tcpIP
+		log.debug("New Device IP: ${state.tcpIP}")
 	}
 	
-	if (state.cameraPort != cameraPort) {
-		state.cameraPort = cameraPort
-		log.debug("New device port: ${state.cameraPort}")
+	if 	(state.tcpPort != tcpPort && tcpPort != null) {
+			state.tcpPort = tcpPort
+			log.debug("New device port: ${state.tcpPort}")
+	} else {
+		state.tcpPort = "80"
+		log.debug("using default port: ${state.tcpPort}")
+
 	}
 
-	if (state.cameraChannel != cameraChannel) {
+	if (state.cameraChannel != cameraChannel && cameraChannel != null) {
 		state.cameraChannel = cameraChannel
 		log.debug("New Camera Channel: ${state.CameraChannel}")
+	} else {
+		state.cameraChannel = "0"
+		log.debug("Using default Camera Channel: ${state.CameraChannel}")
 	}
-	// state.cameraPort = 80
 
-	// state.cameraUsername = "admin"
 
-	if (state.nvrUserName != nvrUserName) {
-		state.nvrUserName = nvrUserName
+	if (state.userName != userName && userName != null) {
+		state.userName = userName
 		log.debug("New Device Username")
 		clearDigestAuthData()
+	} else {
+		state.userName = "admin"
+		log.debug("Using default username: ${state.userName}")
 	}
 
-	if (state.nvrPassword != nvrPassword) {
-		state.nvrPassword = nvrPassword
+	if (state.password != password) {
+		state.password = password
 		log.debug("New device Password")
 		clearDigestAuthData()
 	}
@@ -111,6 +119,17 @@ def parseResponse(physicalgraph.device.HubResponse response) {
 	return parse(response.description)
 }
 
+def getMotionDetectUrl() {
+	return "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[${state.cameraChannel}].Enable"
+}
+
+def setMotionDetectTrueUrl() {
+	return "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=true"
+}
+
+def setMotionDetectFalseUrl() {
+	return "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=false"
+}
 
 def parse(String description) {
 	log.debug("parse()")
@@ -125,9 +144,9 @@ def parse(String description) {
 	if (msg.status == 200) {
 		// Delete last request info since it succeeded
 		def lastRequest = state.lastRequest
-		def getMotionDetectUrl = "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[${state.cameraChannel}].Enable"
-		def setMotionDetectTrueUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=true"
-		def setMotionDetectFalseUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=false"
+		// def getMotionDetectUrl = "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[${state.cameraChannel}].Enable"
+		// def setMotionDetectTrueUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=true"
+		// def setMotionDetectFalseUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=false"
 		state.remove("lastRequest")
 
 		// use lastRequest uri to decide how to handle response
@@ -135,16 +154,16 @@ def parse(String description) {
 			handleInformationResponse(msg)
 			return
 		}
-		else if (lastRequest.uri.endsWith(getMotionDetectUrl)) {
+		else if (lastRequest.uri.endsWith(getMotionDetectUrl())) {
 			handleVideoanalysisResponse(msg, lastRequest)
 			return
 		}
 
-		else if (lastRequest.uri.endsWith(setMotionDetectTrueUrl)) {
+		else if (lastRequest.uri.endsWith(setMotionDetectTrueUrl())) {
 			handleVideoanalysisResponse(msg, lastRequest)
 			return
 		}
-		else if (lastRequest.uri.endsWith(setMotionDetectFalseUrl)) {
+		else if (lastRequest.uri.endsWith(setMotionDetectFalseUrl())) {
 			handleVideoanalysisResponse(msg, lastRequest)
 			return
 		}
@@ -174,8 +193,8 @@ def refresh() {
 
 def healthCheck() {
 	log.debug("healthCheck()")
-	def getMotionDetectUrl = "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[${state.cameraChannel}]"
-	def action = createCameraRequest("GET", getMotionDetectUrl)
+	// def getMotionDetectUrl = "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[${state.cameraChannel}]"
+	def action = createCameraRequest("GET", getMotionDetectUrl())
 	sendHubCommand(action)
 }
 
@@ -192,9 +211,17 @@ def handleVideoanalysisResponse(response, lastRequest) {
 		// def detectionType = response.data['body']
 		// log.debug("detectionType: ${response.data}" testTrailingSpace)
 		def detectionType = response.body.toString().trim()
+        
+		if (cameraChannel == null) {
+        def detectionString = ("table.MotionDetect[0].Enable=false").toString()
+        state = (detectionType == detectionString ? "off" : "on")
+        } else {
         def detectionString = ("table.MotionDetect[${cameraChannel}].Enable=false").toString()
+        state = (detectionType == detectionString ? "off" : "on")
+        }
+		//def detectionString = ("table.MotionDetect[${cameraChannel}].Enable=false").toString()
         // log.debug("respons.body: ${response.body}")
-		state = (detectionType == detectionString ? "off" : "on")
+		//state = (detectionType == detectionString ? "off" : "on")
         log.debug("detectionType: ${detectionType}")
 		// log.debug("state: ${state}")
 	}
@@ -236,8 +263,8 @@ def retryLastRequest(data) {
 
 def checkMotionDetectionSetting() {
 	log.debug("checkMotionDetectionSetting()")
-	def getMotionDetectUrl = "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[${state.cameraChannel}].Enable"
-    def action = createCameraRequest("GET", getMotionDetectUrl, true)
+	// def getMotionDetectUrl = "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[${state.cameraChannel}].Enable"
+    def action = createCameraRequest("GET", getMotionDetectUrl(), true)
 	//def action = createCameraRequest("GET", "/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0].Enable", true)
 	// log.debug("checking motion detection setting with request: ${action}")
 	sendHubCommand(action)
@@ -245,15 +272,15 @@ def checkMotionDetectionSetting() {
 
 def setMotionDetectionSettingEnabled(on) {
     def detectionType = on ? "true" : "false"
-	def setMotionDetectTrueUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=true"
-	def action = createCameraRequest("PUT", setMotionDetectTrueUrl, true, [Enable : detectionType])
+	// def setMotionDetectTrueUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=true"
+	def action = createCameraRequest("PUT", setMotionDetectTrueUrl(), true, [Enable : detectionType])
 	//log.debug("Setting motion detection setting ${on} with request: ${action}")
 	sendHubCommand(action)
 }
 def setMotionDetectionSettingDisabled(off) {
     def detectionType = off ? "false" : "true"
-	def setMotionDetectFalseUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=false"
-	def action = createCameraRequest("PUT", setMotionDetectFalseUrl, true, [Enable : detectionType])
+	// def setMotionDetectFalseUrl = "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[${state.cameraChannel}].Enable=false"
+	def action = createCameraRequest("PUT", setMotionDetectFalseUrl(), true, [Enable : detectionType])
 	//log.debug("Setting motion detection setting ${off} with request: ${action}")
 	sendHubCommand(action)
 }
@@ -276,14 +303,14 @@ def clearDigestAuthData() {
 private physicalgraph.device.HubAction createCameraRequest(method, uri, useAuth = false, payload = null, isRetry = false) {
 	log.debug("Creating camera request with method: ${method}, uri: ${uri}, payload: ${payload}, isRetry: ${isRetry}")
 
-	if (state.nvrIP == null || state.nvrPassword == null) {
+	if (state.tcpIP == null || state.password == null) {
 		log.debug("Cannot check motion detection status, IP address or password is not set.")
 		return null
 	}
 
 	try {
 		def headers = [
-			HOST: "${state.nvrIP}:${state.cameraPort}"
+			HOST: "${state.tcpIP}:${state.tcpPort}"
 		]
 		if (useAuth && state.digestAuthFields) {
 			// Increment nonce count and generate new client nonce (cheat: just MD5 the nonce count)
@@ -352,15 +379,15 @@ private String generateDigestAuthHeader(method, uri) {
 	HA2=MD5(method:digestURI)
 	response=MD5(HA1:nonce:nonceCount:cnonce:qop:HA2)
 	*/
-	def ha1 = md5("${state.nvrUserName}:${state.digestAuthFields.realm}:${state.nvrPassword}")
-	// log.debug("ha1: ${ha1} (${state.nvrUserName}:${state.digestAuthFields.realm}:${state.nvrPassword})")
+	def ha1 = md5("${state.userName}:${state.digestAuthFields.realm}:${state.password}")
+	// log.debug("ha1: ${ha1} (${state.userName}:${state.digestAuthFields.realm}:${state.password})")
 
 	def ha2 = md5("${method}:${uri}")
 	// log.debug("ha2: ${ha2} (${method}:${uri})")
 
 	def digestAuth = md5("${ha1}:${state.digestAuthFields.nonce}:${state.digestAuthFields.nc}:${state.digestAuthFields.cnonce}:${state.digestAuthFields.qop}:${ha2}")
 	// log.debug("digestAuth: ${digestAuth} (${ha1}:${state.digestAuthFields.nonce}:${state.digestAuthFields.nc}:${state.digestAuthFields.cnonce}:${state.digestAuthFields.qop}:${ha2})")
-	def authHeader = "Digest username=\"${state.nvrUserName}\", realm=\"${state.digestAuthFields.realm}\", nonce=\"${state.digestAuthFields.nonce}\", uri=\"${uri}\", qop=\"${state.digestAuthFields.qop}\", nc=\"${state.digestAuthFields.nc}\", cnonce=\"${state.digestAuthFields.cnonce}\", response=\"${digestAuth}\""
+	def authHeader = "Digest username=\"${state.userName}\", realm=\"${state.digestAuthFields.realm}\", nonce=\"${state.digestAuthFields.nonce}\", uri=\"${uri}\", qop=\"${state.digestAuthFields.qop}\", nc=\"${state.digestAuthFields.nc}\", cnonce=\"${state.digestAuthFields.cnonce}\", response=\"${digestAuth}\""
 	return authHeader
 }
 
