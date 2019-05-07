@@ -49,11 +49,11 @@ metadata {
 	}
 
 	preferences {
-		input name: "tcpIP", type: "text", title: "Device IP", description: "Enter the IP of the Dahua Device", displayDuringSetup: true, required: true
-		input name: "tcpPort", type: "text", title: "TCP Port", description: "Enter the TCP port of the Dahua Device, port 80 is used if no value is entered", displayDuringSetup: true, required: true
-		input name: "cameraChannel", type: "text", title: "Camera Channel", description: "Enter the channel of the camera", displayDuringSetup: true, required: false		
-        input name: "userName", type: "text", title: "Username", description: "Enter the username of the device", displayDuringSetup: true, required: true
-        input name: "password", type: "password", title: "Password", description: "Enter the password of the device", displayDuringSetup: true, required: true
+		input name: "tcpIP", type: "text", title: "Device IP", description: "IP of the Dahua Device", displayDuringSetup: true, required: true
+		input name: "tcpPort", type: "text", title: "TCP Port", description: "TCP port of the Dahua Device", displayDuringSetup: true, required: false
+		input name: "cameraChannel", type: "text", title: "Camera Channel", description: "Channel of the camera", displayDuringSetup: true, required: false		
+        input name: "username", type: "text", title: "Username", description: "Username of the device", displayDuringSetup: true, required: true
+        input name: "password", type: "password", title: "Password", description: "Password of the device", displayDuringSetup: true, required: false
 
 	}
 }
@@ -89,13 +89,13 @@ def updated() {
 	}
 
 
-	if (state.userName != userName && userName != null) {
-		state.userName = userName
+	if (state.username != username && username != null) {
+		state.username = username
 		log.debug("New Device Username")
 		clearDigestAuthData()
 	} else {
-		state.userName = "admin"
-		log.debug("Using default username: ${state.userName}")
+		state.username = "admin"
+		log.debug("Using default username: ${state.username}")
 	}
 
 	if (state.password != password) {
@@ -379,15 +379,15 @@ private String generateDigestAuthHeader(method, uri) {
 	HA2=MD5(method:digestURI)
 	response=MD5(HA1:nonce:nonceCount:cnonce:qop:HA2)
 	*/
-	def ha1 = md5("${state.userName}:${state.digestAuthFields.realm}:${state.password}")
-	// log.debug("ha1: ${ha1} (${state.userName}:${state.digestAuthFields.realm}:${state.password})")
+	def ha1 = md5("${state.username}:${state.digestAuthFields.realm}:${state.password}")
+	// log.debug("ha1: ${ha1} (${state.username}:${state.digestAuthFields.realm}:${state.password})")
 
 	def ha2 = md5("${method}:${uri}")
 	// log.debug("ha2: ${ha2} (${method}:${uri})")
 
 	def digestAuth = md5("${ha1}:${state.digestAuthFields.nonce}:${state.digestAuthFields.nc}:${state.digestAuthFields.cnonce}:${state.digestAuthFields.qop}:${ha2}")
 	// log.debug("digestAuth: ${digestAuth} (${ha1}:${state.digestAuthFields.nonce}:${state.digestAuthFields.nc}:${state.digestAuthFields.cnonce}:${state.digestAuthFields.qop}:${ha2})")
-	def authHeader = "Digest username=\"${state.userName}\", realm=\"${state.digestAuthFields.realm}\", nonce=\"${state.digestAuthFields.nonce}\", uri=\"${uri}\", qop=\"${state.digestAuthFields.qop}\", nc=\"${state.digestAuthFields.nc}\", cnonce=\"${state.digestAuthFields.cnonce}\", response=\"${digestAuth}\""
+	def authHeader = "Digest username=\"${state.username}\", realm=\"${state.digestAuthFields.realm}\", nonce=\"${state.digestAuthFields.nonce}\", uri=\"${uri}\", qop=\"${state.digestAuthFields.qop}\", nc=\"${state.digestAuthFields.nc}\", cnonce=\"${state.digestAuthFields.cnonce}\", response=\"${digestAuth}\""
 	return authHeader
 }
 
